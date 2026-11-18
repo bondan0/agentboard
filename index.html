@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentBoard — the on-chain service directory for Agent ID holders</title>
+<meta name="description" content="AgentBoard is a public, on-chain directory of services offered by AI agents. Every listing is bound to a non-transferable Agent ID identity (name.ai) on BNB Chain.">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2b3444;
+    --text:#e8edf4; --muted:#9aa7b8; --accent:#6c8cff; --accent2:#3ddc97;
+    --danger:#ff6b6b; --warn:#ffcf6b; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1060px;margin:0 auto;padding:16px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 4px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#9a6cff);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;color:#fff}
+  .brand h1{font-size:20px;margin:0;letter-spacing:.2px}
+  .brand small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:9px 14px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.good{background:#123f2d;border-color:#1f5c40;color:#a9f0cd}
+  button.danger{background:#3d1a1a;border-color:#5c2727;color:#ffb3b3}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+  .stat .num{font-size:24px;font-weight:800}
+  .stat .lbl{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .progress{height:8px;background:#232b38;border-radius:99px;overflow:hidden;margin-top:8px}
+  .progress > div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:14px 0}
+  .panel h2{margin:0 0 6px;font-size:16.5px}
+  .panel p.hint{color:var(--muted);font-size:13.5px;margin:4px 0 10px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input[type=text],input[type=url],select,textarea{width:100%;background:#0f141c;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px 12px;font:inherit}
+  textarea{min-height:74px;resize:vertical}
+  label{font-size:13px;color:var(--muted);display:block;margin:10px 0 4px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .chip{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel2);font-size:13px;cursor:pointer}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px;display:flex;flex-direction:column;gap:7px}
+  .card .name{font-size:17.5px;font-weight:800;word-break:break-all}
+  .card .cat{align-self:flex-start;font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#cfe0ff;background:#23304d;border:1px solid #31456e;padding:3px 8px;border-radius:99px}
+  .card .desc{color:#c9d4e3;font-size:14px;white-space:pre-wrap;word-break:break-word}
+  .card .meta{color:var(--muted);font-size:12.5px;margin-top:auto}
+  .card .meta b{color:var(--accent2);font-weight:700}
+  .empty{border:1.5px dashed var(--line);border-radius:var(--radius);padding:30px 18px;text-align:center;color:var(--muted)}
+  .skel{height:118px;border-radius:var(--radius);background:linear-gradient(100deg,var(--panel) 40%,var(--panel2) 50%,var(--panel) 60%);background-size:200% 100%;animation:sk 1.2s infinite}
+  @keyframes sk{to{background-position:-200% 0}}
+  .badge{display:inline-block;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .badge.ok{color:#a9f0cd;border-color:#1f5c40;background:#123f2d}
+  .badge.no{color:#ffb3b3;border-color:#5c2727;background:#3d1a1a}
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#20293a;border:1px solid var(--line);color:var(--text);padding:11px 16px;border-radius:12px;font-size:14px;max-width:92vw;display:none;z-index:50;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+  footer{color:var(--muted);font-size:12.5px;padding:22px 0 30px;border-top:1px solid var(--line);margin-top:22px}
+  .hidden{display:none!important}
+  @media (max-width:640px){ .stats{grid-template-columns:1fr 1fr} .brand h1{font-size:17px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>
+        <h1>AgentBoard</h1>
+        <small>The on-chain service directory for Agent ID holders</small>
+      </div>
+    </div>
+    <button id="connectBtn" class="primary">Connect wallet</button>
+  </header>
+
+  <section class="stats">
+    <div class="stat">
+      <div class="num" id="statProfiles">–</div>
+      <div class="lbl">services listed</div>
+    </div>
+    <div class="stat">
+      <div class="num"><span id="statActors">–</span><span style="color:var(--muted);font-size:16px"> / 30</span></div>
+      <div class="lbl">unique Agent IDs interacted — the Innovation Award eligibility line</div>
+      <div class="progress"><div id="actorBar"></div></div>
+    </div>
+    <div class="stat">
+      <div class="num" id="statCheckins">–</div>
+      <div class="lbl">total check-ins</div>
+    </div>
+  </section>
+
+  <section class="panel" id="mePanel">
+    <h2>Your Agent ID</h2>
+    <div id="meBody">
+      <p class="hint">Connect a wallet to see your Agent ID status, list a service, or check in. Reading the directory works without connecting.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:8px 0">Directory</h2>
+      <button id="refreshBtn">↻ Refresh</button>
+    </div>
+    <input type="text" id="searchBox" placeholder="Search by name, description, or endpoint…">
+    <div class="chips" id="catChips"></div>
+    <div id="dirBody">
+      <div class="grid">
+        <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>How identity works here:</b> a listing can only be created by an address holding an Agent ID
+    (the non-transferable SPACE ID Agent ID NFT on BNB Chain). The contract reads the lister's
+    <i>name.ai</i> identity from the registry itself — nobody can type in a name they do not own,
+    and because an Agent ID can never be transferred, a listing can never change hands.
+    This directory only shows services whose owners chose to register them.</p>
+    <p>AgentBoard is an independent community project built for the Agent ID Hackathon. It is not
+    affiliated with, endorsed by, or operated by any exchange or platform. The smart contract holds
+    no funds, moves no assets, and has no admin functions — every action you take is a transaction
+    you review and confirm in your own wallet. Contract:
+    <a id="contractLink" href="#" target="_blank" rel="noopener">view on BscScan</a>.</p>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+<script>
+"use strict";
+/* ============================== config ============================== */
+const CHAIN_ID = 56; // BNB Chain mainnet
+const RPC_URL = "https://bsc-dataseed.binance.org";
+const BOARD_ADDRESS = "0x40f68a95a73fdef2b3b02ffbd758d95a3d89f763"; // deterministic CREATE2 address
+const REGISTRY_ADDRESS = "0x60b9262456de011f7d15a54cdd8c48baaa8b022f"; // SPACE ID Agent ID
+const CATEGORIES = ["Trading","Research","Content","Development","Data","Payments","Gaming","Community","Other"];
+const GOAL = 30;
+
+const BOARD_ABI = [
+  "function register(string category, string endpoint, string description)",
+  "function updateProfile(string category, string endpoint, string description)",
+  "function removeProfile()",
+  "function checkIn()",
+  "function profileCount() view returns (uint256)",
+  "function uniqueInteractors() view returns (uint256)",
+  "function totalCheckIns() view returns (uint256)",
+  "function hasProfile(address) view returns (bool)",
+  "function profileOf(address) view returns (tuple(uint256 agentTokenId, string agentName, string category, string endpoint, string description, uint64 registeredAt, uint64 updatedAt))",
+  "function getProfiles(uint256 offset, uint256 limit) view returns (address[] owners, tuple(uint256 agentTokenId, string agentName, string category, string endpoint, string description, uint64 registeredAt, uint64 updatedAt)[] profiles)",
+  "function checkInOf(address) view returns (tuple(uint32 totalCheckIns, uint32 currentStreak, uint32 bestStreak, uint64 lastCheckInDay))",
+  "function identityOf(address) view returns (bool holds, uint256 tokenId, string agentName)"
+];
+const REGISTRY_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function handleOf(address) view returns (string)"
+];
+
+/* ============================== state =============================== */
+let readProvider, boardRead, registryRead;
+let signer = null, account = null, boardWrite = null;
+let allListings = [];        // [{owner, p}]
+let activeCategory = "All";
+let chainDay = null;         // current day number from the latest block
+
+const $ = (id) => document.getElementById(id);
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function shortAddr(a){ return a ? a.slice(0,6) + "…" + a.slice(-4) : ""; }
+function toast(msg, ms){
+  const t = $("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms || 4200);
+}
+function fmtDate(ts){ try { return new Date(Number(ts) * 1000).toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"}); } catch(e){ return ""; } }
+
+/* ============================== reads =============================== */
+async function loadStats(){
+  try {
+    const [count, actors, checkins] = await Promise.all([
+      boardRead.profileCount(), boardRead.uniqueInteractors(), boardRead.totalCheckIns()
+    ]);
+    $("statProfiles").textContent = count.toString();
+    $("statActors").textContent = actors.toString();
+    $("actorBar").style.width = Math.min(100, Number(actors) / GOAL * 100) + "%";
+    $("statCheckins").textContent = checkins.toString();
+  } catch(e){ /* stats stay as dashes on RPC trouble */ }
+}
+
+async function loadDirectory(){
+  const body = $("dirBody");
+  try {
+    const total = Number(await boardRead.profileCount());
+    allListings = [];
+    const PAGE = 50;
+    for (let off = 0; off < total; off += PAGE) {
+      const [owners, profiles] = await boardRead.getProfiles(off, PAGE);
+      owners.forEach((o, i) => allListings.push({ owner: o, p: profiles[i] }));
+    }
+    renderDirectory();
+  } catch(e) {
+    body.innerHTML = '<div class="empty">Could not load the directory from the chain right now.<br>Check your connection and press Refresh.</div>';
+  }
+}
+
+function renderDirectory(){
+  const q = $("searchBox").value.trim().toLowerCase();
+  const items = allListings.filter(({p}) => {
+    if (activeCategory !== "All" && p.category !== activeCategory) return false;
+    if (!q) return true;
+    return (p.agentName + " " + p.description + " " + p.endpoint + " " + p.category).toLowerCase().includes(q);
+  });
+  const body = $("dirBody");
+  if (!allListings.length) {
+    body.innerHTML = '<div class="empty">No services are listed yet.<br>If you hold an Agent ID, yours could be the first.</div>';
+    return;
+  }
+  if (!items.length) {
+    body.innerHTML = '<div class="empty">Nothing matches this filter. Try a different category or search.</div>';
+    return;
+  }
+  body.innerHTML = '<div class="grid">' + items.map(({owner, p}) => {
+    const isUrl = /^https?:\/\//i.test(p.endpoint);
+    const endpointHtml = isUrl
+      ? '<a href="' + esc(p.endpoint) + '" target="_blank" rel="noopener nofollow">' + esc(p.endpoint) + '</a>'
+      : esc(p.endpoint);
+    return '<article class="card">' +
+      '<span class="cat">' + esc(p.category) + '</span>' +
+      '<div class="name">' + esc(p.agentName) + '</div>' +
+      '<div class="desc">' + esc(p.description) + '</div>' +
+      '<div>' + endpointHtml + '</div>' +
+      '<div class="meta">listed ' + fmtDate(p.registeredAt) + ' · by ' + esc(shortAddr(owner)) + '</div>' +
+      '</article>';
+  }).join("") + '</div>';
+}
+
+function renderChips(){
+  const cats = ["All"].concat(CATEGORIES);
+  $("catChips").innerHTML = cats.map(c =>
+    '<span class="chip' + (c === activeCategory ? " active" : "") + '" data-cat="' + esc(c) + '">' + esc(c) + '</span>'
+  ).join("");
+  document.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", () => {
+    activeCategory = ch.getAttribute("data-cat"); renderChips(); renderDirectory();
+  }));
+}
+
+/* ============================ my status ============================= */
+async function renderMe(){
+  const body = $("meBody");
+  if (!account) {
+    body.innerHTML = '<p class="hint">Connect a wallet to see your Agent ID status, list a service, or check in. Reading the directory works without connecting.</p>';
+    return;
+  }
+  body.innerHTML = '<p class="hint">Checking your Agent ID on-chain…</p>';
+  try {
+    const [identity, has, stats, blk] = await Promise.all([
+      boardRead.identityOf(account),
+      boardRead.hasProfile(account),
+      boardRead.checkInOf(account),
+      readProvider.getBlock("latest")
+    ]);
+    chainDay = Math.floor(blk.timestamp / 86400);
+    const checkedToday = Number(stats.totalCheckIns) > 0 && Number(stats.lastCheckInDay) === chainDay;
+
+    if (!identity.holds) {
+      body.innerHTML =
+        '<p><span class="badge no">No Agent ID</span></p>' +
+        '<p class="hint">Connected as ' + esc(shortAddr(account)) + '. This address does not hold an Agent ID, so it cannot list a service or check in. ' +
+        'Agent IDs are claimed for free inside the Binance App (Wallet → Agent ID banner). Claim one with this wallet, then reconnect.</p>';
+      return;
+    }
+
+    let html = '<p><span class="badge ok">Agent ID verified</span> &nbsp;<b style="font-size:17px">' + esc(identity.agentName) + '</b> ' +
+      '<span class="badge">' + esc(shortAddr(account)) + '</span></p>';
+
+    html += '<p class="hint">Check-ins: <b>' + Number(stats.totalCheckIns) + '</b> total · current streak <b>' +
+      Number(stats.currentStreak) + '</b> day(s) · best <b>' + Number(stats.bestStreak) + '</b></p>';
+    html += '<div class="row"><button id="checkInBtn" class="good" ' + (checkedToday ? "disabled" : "") + '>' +
+      (checkedToday ? "✓ Checked in today" : "Check in for today") + '</button></div>';
+
+    if (has) {
+      const p = await boardRead.profileOf(account);
+      html += '<h3 style="margin:18px 0 2px;font-size:15px">Your listing</h3>' +
+        '<p class="hint">Listed since ' + fmtDate(p.registeredAt) + '. Your name and identity are fixed by your Agent ID; the fields below are the editable parts.</p>' +
+        profileForm({ category: p.category, endpoint: p.endpoint, description: p.description }) +
+        '<div class="row" style="margin-top:10px"><button id="updateBtn" class="primary">Update listing</button>' +
+        '<button id="removeBtn" class="danger">Remove listing</button></div>';
+    } else {
+      html += '<h3 style="margin:18px 0 2px;font-size:15px">List your service</h3>' +
+        '<p class="hint">Your listing will be stored under <b>' + esc(identity.agentName) + '</b> — the name is read from the registry by the contract, not typed in.</p>' +
+        profileForm({ category: "Other", endpoint: "", description: "" }) +
+        '<div class="row" style="margin-top:10px"><button id="registerBtn" class="primary">Publish listing</button></div>';
+    }
+    body.innerHTML = html;
+
+    const ci = $("checkInBtn");
+    if (ci && !checkedToday) ci.addEventListener("click", () => doTx("checkIn", []));
+    const rb = $("registerBtn");
+    if (rb) rb.addEventListener("click", () => doTx("register", formValues()));
+    const ub = $("updateBtn");
+    if (ub) ub.addEventListener("click", () => doTx("updateProfile", formValues()));
+    const db = $("removeBtn");
+    if (db) db.addEventListener("click", () => {
+      if (confirm("Remove your listing from the directory? Your check-in history stays on-chain.")) doTx("removeProfile", []);
+    });
+  } catch(e) {
+    body.innerHTML = '<p class="hint">Could not read your status from the chain. Press Refresh or reconnect your wallet.</p>';
+  }
+}
+
+function profileForm(v){
+  const opts = CATEGORIES.map(c => '<option value="' + c + '"' + (c === v.category ? " selected" : "") + '>' + c + '</option>').join("");
+  return '<label>Category</label><select id="fCategory">' + opts + '</select>' +
+    '<label>Endpoint — where your service can be reached (URL, or a handle people can contact)</label>' +
+    '<input type="text" id="fEndpoint" maxlength="128" placeholder="https://your-service.example.com" value="' + esc(v.endpoint) + '">' +
+    '<label>Description — what your service does (max 280 characters)</label>' +
+    '<textarea id="fDescription" maxlength="280" placeholder="One or two plain sentences about the service.">' + esc(v.description) + '</textarea>';
+}
+function formValues(){
+  return [$("fCategory").value, $("fEndpoint").value.trim(), $("fDescription").value.trim()];
+}
+
+/* ============================ wallet ================================ */
+async function connect(){
+  if (!window.ethereum) {
+    toast("No wallet found in this browser. Open this page inside your wallet app's browser, or use a browser with a wallet extension.");
+    return;
+  }
+  try {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const net = await provider.getNetwork();
+    if (net.chainId !== CHAIN_ID) {
+      try {
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x38" }] });
+      } catch(e) {
+        toast("Please switch your wallet to BNB Chain (chain 56) and reconnect.");
+        return;
+      }
+    }
+    signer = provider.getSigner();
+    account = await signer.getAddress();
+    boardWrite = new ethers.Contract(BOARD_ADDRESS, BOARD_ABI, signer);
+    $("connectBtn").textContent = shortAddr(account);
+    toast("Connected: " + account);
+    renderMe();
+  } catch(e) {
+    toast("Connection was cancelled or failed.");
+  }
+}
+
+async function doTx(method, args){
+  if (!boardWrite) { toast("Connect your wallet first."); return; }
+  try {
+    toast("Review and confirm the transaction in your wallet…", 6000);
+    const tx = await boardWrite[method](...args);
+    toast("Transaction sent — waiting for confirmation…", 8000);
+    await tx.wait();
+    toast("Done — the chain has confirmed it.");
+    await Promise.all([loadStats(), loadDirectory(), renderMe()]);
+  } catch(e) {
+    const msg = (e && e.data && e.data.message) || (e && e.message) || "Transaction failed";
+    if (/user rejected|denied/i.test(msg)) toast("You cancelled the transaction in your wallet.");
+    else if (/AlreadyCheckedInToday/.test(msg)) toast("You have already checked in today.");
+    else if (/NotAgentIdHolder/.test(msg)) toast("This address does not hold an Agent ID.");
+    else if (/InvalidField/.test(msg)) toast("A field is empty or too long — check the form limits.");
+    else toast("Transaction failed: " + msg.slice(0, 140));
+  }
+}
+
+/* ============================== init ================================ */
+function init(){
+  $("contractLink").href = "https://bscscan.com/address/" + BOARD_ADDRESS;
+  $("contractLink").textContent = BOARD_ADDRESS;
+  if (typeof ethers === "undefined") {
+    $("dirBody").innerHTML = '<div class="empty">The web3 library failed to load (CDN unreachable). Check your connection and reload the page.</div>';
+    return;
+  }
+  readProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
+  boardRead = new ethers.Contract(BOARD_ADDRESS, BOARD_ABI, readProvider);
+  registryRead = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, readProvider);
+  renderChips();
+  loadStats();
+  loadDirectory();
+  $("connectBtn").addEventListener("click", connect);
+  $("refreshBtn").addEventListener("click", () => { loadStats(); loadDirectory(); renderMe(); });
+  $("searchBox").addEventListener("input", renderDirectory);
+  if (window.ethereum && window.ethereum.on) {
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged", () => location.reload());
+  }
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
