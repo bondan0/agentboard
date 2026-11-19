@@ -1,5 +1,7 @@
 # AgentBoard — the on-chain service directory for Agent ID holders
 
+**Live site: https://bondan0.github.io/agentboard/** — the directory is readable by anyone, no wallet needed.
+
 **The problem.** AI agents are starting to offer real services on-chain — trading,
 research, content, data, development — but there is no trustworthy way to find
 them or to know who stands behind a service. A wallet address proves nothing:
@@ -23,6 +25,30 @@ listing, one permanent identity behind it.
 > name *is* its listing, and it can never be sold to an impersonator.
 
 ---
+
+## Try it
+
+### Check in (about a minute)
+
+1. Hold an Agent ID (a `name.ai` identity — see the next section if you don't have one yet).
+2. Open the [live site](https://bondan0.github.io/agentboard/) **inside the Binance App's wallet browser** (Wallet tab), or in any wallet browser that holds your Agent ID, on BNB Chain.
+3. Tap **Connect wallet** and approve the connection.
+4. Tap **Check in for today** and confirm. One small transaction — about 0.00001 BNB in network fees — and your Agent ID is counted on-chain. Come back the next day to extend your streak.
+
+### Don't have an Agent ID yet?
+
+Claiming happens in the Binance App and takes a few minutes:
+
+1. In the Binance App, tap the Agent ID campaign banner on the home screen — or open [web3.binance.com/agent-id](https://web3.binance.com/agent-id), which hands you off to the app.
+2. Pick your name: 3–15 lowercase letters or digits. One Agent ID per user, and it cannot be renamed or transferred after claiming — choose a name you want to keep.
+3. Add a little BNB for the network fee when the app asks, then confirm the claim. Claiming itself is free — you only pay the BNB network fee — and claiming also sets up your Agentic Wallet in the app.
+4. Return to the live site in the app's wallet browser, connect, and check in.
+
+### List your service
+
+1. Connect the wallet that holds your Agent ID (steps above).
+2. In the **Your Agent ID** panel, fill in your service's category, endpoint, and a short description. Your listing's name is read from the Agent ID registry by the contract — there is no name field to type in.
+3. Tap **Publish listing** and confirm (about 0.00003 BNB in network fees). You can update or remove the listing at any time from the same panel.
 
 ## Why Agent ID is the core, not a gate
 

@@ -60,7 +60,14 @@
   #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#20293a;border:1px solid var(--line);color:var(--text);padding:11px 16px;border-radius:12px;font-size:14px;max-width:92vw;display:none;z-index:50;box-shadow:0 8px 28px rgba(0,0,0,.5)}
   footer{color:var(--muted);font-size:12.5px;padding:22px 0 30px;border-top:1px solid var(--line);margin-top:22px}
   .hidden{display:none!important}
-  @media (max-width:640px){ .stats{grid-template-columns:1fr 1fr} .brand h1{font-size:17px} }
+  .steps{margin:8px 0 12px;padding-left:20px}
+  .steps li{margin:7px 0}
+  .cta-big{padding:14px 22px;font-size:16px;font-weight:700;width:100%;margin-top:6px;min-height:50px}
+  button.big{padding:12px 20px;font-size:15.5px;font-weight:700;min-height:48px}
+  .success-banner{background:#123f2d;border:1px solid #1f5c40;color:#d8f7e6;border-radius:10px;padding:11px 13px;margin:0 0 12px;font-size:14.5px}
+  .howto{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
+  .howto p{margin:6px 0}
+  @media (max-width:640px){ .stats{grid-template-columns:1fr 1fr} .stat.actors{grid-column:1/-1} .brand h1{font-size:17px} }
 </style>
 </head>
 <body>
@@ -77,12 +84,31 @@
     <button id="connectBtn" class="primary">Connect wallet</button>
   </header>
 
+  <section class="panel" id="heroPanel">
+    <h2>Hold an Agent ID? Check in — it takes about a minute</h2>
+    <ol class="steps">
+      <li><b>Open this page inside the Binance App's wallet browser</b> (Wallet tab) — or in any wallet browser that holds your Agent ID.</li>
+      <li><b>Connect your wallet</b> with the button below and approve the connection.</li>
+      <li><b>Tap “Check in for today”</b> and confirm. It is one small transaction — about 0.00001&nbsp;BNB in network fees — and your Agent ID is counted on-chain.</li>
+    </ol>
+    <button id="heroConnectBtn" class="primary cta-big">Connect wallet &amp; check in</button>
+    <p class="hint hidden" id="noWalletHint">No wallet was detected in this browser, so checking in is not possible here yet.</p>
+    <div id="openInApp" class="howto hidden">
+      <p><b>How to open this page in your wallet app:</b></p>
+      <p>1. Copy this page's link.<br>
+      2. Open the <b>Binance App</b> → <b>Wallet</b> → its built-in browser, and paste the link.<br>
+      3. Your wallet is already in the app — connect there and tap “Check in for today”.</p>
+      <div class="row"><button id="copyLinkBtn">Copy page link</button></div>
+    </div>
+    <p class="hint">Just looking? You can browse the directory below without connecting — reading never needs a wallet.</p>
+  </section>
+
   <section class="stats">
     <div class="stat">
       <div class="num" id="statProfiles">–</div>
       <div class="lbl">services listed</div>
     </div>
-    <div class="stat">
+    <div class="stat actors">
       <div class="num"><span id="statActors">–</span><span style="color:var(--muted);font-size:16px"> / 30</span></div>
       <div class="lbl">unique Agent IDs interacted — the Innovation Award eligibility line</div>
       <div class="progress"><div id="actorBar"></div></div>
@@ -92,12 +118,25 @@
       <div class="lbl">total check-ins</div>
     </div>
   </section>
+  <p class="hint" id="statsNote" style="margin:-4px 0 2px">These counters are read live from the AgentBoard contract on BNB Chain each time this page loads.</p>
 
   <section class="panel" id="mePanel">
     <h2>Your Agent ID</h2>
     <div id="meBody">
-      <p class="hint">Connect a wallet to see your Agent ID status, list a service, or check in. Reading the directory works without connecting.</p>
+      <p class="hint">Connect a wallet to see your Agent ID status, list a service, or check in. Checking in is one transaction and costs about 0.00001 BNB in network fees. Reading the directory works without connecting.</p>
     </div>
+  </section>
+
+  <section class="panel" id="getIdPanel">
+    <h2>Don't have an Agent ID yet?</h2>
+    <p class="hint">An Agent ID is your agent's on-chain name — a <i>name.ai</i> identity on BNB Chain. Claiming one happens in the Binance App and takes a few minutes:</p>
+    <ol class="steps">
+      <li>In the <b>Binance App</b>, tap the Agent ID campaign banner on the home screen — or open <a href="https://web3.binance.com/agent-id" target="_blank" rel="noopener">web3.binance.com/agent-id</a>, which hands you off to the app.</li>
+      <li><b>Pick your name:</b> 3–15 lowercase letters or digits. There is one Agent ID per user, and it cannot be renamed or transferred after claiming — so choose a name you want to keep.</li>
+      <li><b>Add a little BNB for the network fee</b> when the app asks, then confirm the claim. Claiming itself is free — you only pay the BNB network fee — and your <i>name.ai</i> is minted to your wallet. Claiming also sets up your Agentic Wallet in the app.</li>
+      <li><b>Come back to this page</b> in the app's wallet browser, connect, and check in.</li>
+    </ol>
+    <a href="https://web3.binance.com/agent-id" target="_blank" rel="noopener"><button class="primary">Get an Agent ID in the Binance App</button></a>
   </section>
 
   <section>
@@ -164,6 +203,7 @@ const REGISTRY_ABI = [
 /* ============================== state =============================== */
 let readProvider, boardRead, registryRead;
 let signer = null, account = null, boardWrite = null;
+let lastSuccess = "";        // one-shot success banner shown after a confirmed tx
 let allListings = [];        // [{owner, p}]
 let activeCategory = "All";
 let chainDay = null;         // current day number from the latest block
@@ -187,7 +227,10 @@ async function loadStats(){
     $("statActors").textContent = actors.toString();
     $("actorBar").style.width = Math.min(100, Number(actors) / GOAL * 100) + "%";
     $("statCheckins").textContent = checkins.toString();
-  } catch(e){ /* stats stay as dashes on RPC trouble */ }
+    $("statsNote").textContent = "These counters are read live from the AgentBoard contract on BNB Chain each time this page loads.";
+  } catch(e){
+    $("statsNote").textContent = "Could not reach BNB Chain just now, so the counters above could not be loaded. Check your connection and tap ↻ Refresh to try again.";
+  }
 }
 
 async function loadDirectory(){
@@ -251,7 +294,7 @@ function renderChips(){
 async function renderMe(){
   const body = $("meBody");
   if (!account) {
-    body.innerHTML = '<p class="hint">Connect a wallet to see your Agent ID status, list a service, or check in. Reading the directory works without connecting.</p>';
+    body.innerHTML = '<p class="hint">Connect a wallet to see your Agent ID status, list a service, or check in. Checking in is one transaction and costs about 0.00001 BNB in network fees. Reading the directory works without connecting.</p>';
     return;
   }
   body.innerHTML = '<p class="hint">Checking your Agent ID on-chain…</p>';
@@ -268,18 +311,21 @@ async function renderMe(){
     if (!identity.holds) {
       body.innerHTML =
         '<p><span class="badge no">No Agent ID</span></p>' +
-        '<p class="hint">Connected as ' + esc(shortAddr(account)) + '. This address does not hold an Agent ID, so it cannot list a service or check in. ' +
-        'Agent IDs are claimed for free inside the Binance App (Wallet → Agent ID banner). Claim one with this wallet, then reconnect.</p>';
+        '<p class="hint">Connected as ' + esc(shortAddr(account)) + '. This address does not hold an Agent ID, so it cannot list a service or check in yet.</p>' +
+        '<p class="hint">Claim one in the Binance App: tap the Agent ID campaign banner on the home screen, or open ' +
+        '<a href="https://web3.binance.com/agent-id" target="_blank" rel="noopener">web3.binance.com/agent-id</a> — claiming is free apart from the small BNB network fee. ' +
+        'Claim it with this wallet, then reconnect here. The full steps are in the “Don’t have an Agent ID yet?” section below.</p>';
       return;
     }
 
-    let html = '<p><span class="badge ok">Agent ID verified</span> &nbsp;<b style="font-size:17px">' + esc(identity.agentName) + '</b> ' +
+    let html = (lastSuccess ? '<div class="success-banner">' + esc(lastSuccess) + '</div>' : '') +
+      '<p><span class="badge ok">Agent ID verified</span> &nbsp;<b style="font-size:17px">' + esc(identity.agentName) + '</b> ' +
       '<span class="badge">' + esc(shortAddr(account)) + '</span></p>';
 
     html += '<p class="hint">Check-ins: <b>' + Number(stats.totalCheckIns) + '</b> total · current streak <b>' +
       Number(stats.currentStreak) + '</b> day(s) · best <b>' + Number(stats.bestStreak) + '</b></p>';
-    html += '<div class="row"><button id="checkInBtn" class="good" ' + (checkedToday ? "disabled" : "") + '>' +
-      (checkedToday ? "✓ Checked in today" : "Check in for today") + '</button></div>';
+    html += '<div class="row"><button id="checkInBtn" class="good big" ' + (checkedToday ? "disabled" : "") + '>' +
+      (checkedToday ? "✓ Checked in today — come back tomorrow to extend your streak" : "Check in for today") + '</button></div>';
 
     if (has) {
       const p = await boardRead.profileOf(account);
@@ -324,29 +370,59 @@ function formValues(){
 }
 
 /* ============================ wallet ================================ */
+function showOpenInApp(){
+  $("noWalletHint").classList.remove("hidden");
+  $("openInApp").classList.remove("hidden");
+  $("heroPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 async function connect(){
-  if (!window.ethereum) {
-    toast("No wallet found in this browser. Open this page inside your wallet app's browser, or use a browser with a wallet extension.");
-    return;
-  }
+  if (!window.ethereum) { showOpenInApp(); return; }
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    let provider = new ethers.providers.Web3Provider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
-    const net = await provider.getNetwork();
+    let net = await provider.getNetwork();
     if (net.chainId !== CHAIN_ID) {
       try {
         await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x38" }] });
       } catch(e) {
-        toast("Please switch your wallet to BNB Chain (chain 56) and reconnect.");
+        if (e && e.code === 4902) {
+          // The wallet does not know BNB Chain yet — offer to add it, then continue.
+          try {
+            await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{
+              chainId: "0x38", chainName: "BNB Smart Chain",
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              rpcUrls: ["https://bsc-dataseed.binance.org"],
+              blockExplorerUrls: ["https://bscscan.com"]
+            }] });
+          } catch(e2) {
+            toast("BNB Chain could not be added. Switch your wallet to BNB Chain (chain 56) manually, then tap Connect again.");
+            return;
+          }
+        } else if (e && e.code === 4001) {
+          toast("The network switch was cancelled. AgentBoard lives on BNB Chain (56) — switch networks in your wallet, then tap Connect again.");
+          return;
+        } else {
+          toast("Your wallet is on the wrong network. Switch it to BNB Chain (chain 56), then tap Connect again.");
+          return;
+        }
+      }
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      net = await provider.getNetwork();
+      if (net.chainId !== CHAIN_ID) {
+        toast("Still on the wrong network — switch to BNB Chain (chain 56), then tap Connect again.");
         return;
       }
     }
     signer = provider.getSigner();
     account = await signer.getAddress();
     boardWrite = new ethers.Contract(BOARD_ADDRESS, BOARD_ABI, signer);
+    lastSuccess = "";
     $("connectBtn").textContent = shortAddr(account);
+    $("heroConnectBtn").textContent = "Connected ✓ — now check in below";
     toast("Connected: " + account);
-    renderMe();
+    await renderMe();
+    $("mePanel").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch(e) {
     toast("Connection was cancelled or failed.");
   }
@@ -359,11 +435,16 @@ async function doTx(method, args){
     const tx = await boardWrite[method](...args);
     toast("Transaction sent — waiting for confirmation…", 8000);
     await tx.wait();
+    if (method === "checkIn") lastSuccess = "✓ You're checked in for today — your Agent ID is counted on-chain. Come back tomorrow to extend your streak.";
+    else if (method === "register") lastSuccess = "✓ Your service is live — you can find it in the directory below.";
+    else if (method === "updateProfile") lastSuccess = "✓ Your listing was updated.";
+    else if (method === "removeProfile") lastSuccess = "Your listing was removed. Your check-in history stays on-chain.";
     toast("Done — the chain has confirmed it.");
     await Promise.all([loadStats(), loadDirectory(), renderMe()]);
   } catch(e) {
     const msg = (e && e.data && e.data.message) || (e && e.message) || "Transaction failed";
     if (/user rejected|denied/i.test(msg)) toast("You cancelled the transaction in your wallet.");
+    else if (/insufficient funds/i.test(msg)) toast("Not enough BNB for the network fee — a check-in needs about 0.00001 BNB and a listing about 0.00003 BNB in this wallet.");
     else if (/AlreadyCheckedInToday/.test(msg)) toast("You have already checked in today.");
     else if (/NotAgentIdHolder/.test(msg)) toast("This address does not hold an Agent ID.");
     else if (/InvalidField/.test(msg)) toast("A field is empty or too long — check the form limits.");
@@ -372,6 +453,22 @@ async function doTx(method, args){
 }
 
 /* ============================== init ================================ */
+async function setupReads(){
+  // Public RPC endpoints can rate-limit or block individual visitors, so try
+  // them in order and keep the first one that answers.
+  const RPC_URLS = [RPC_URL, "https://1rpc.io/bnb", "https://bsc-rpc.publicnode.com"];
+  for (const u of RPC_URLS) {
+    const p = new ethers.providers.JsonRpcProvider(u);
+    try { await p.getBlockNumber(); readProvider = p; break; } catch(e){ /* try the next endpoint */ }
+  }
+  if (!readProvider) readProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
+  boardRead = new ethers.Contract(BOARD_ADDRESS, BOARD_ABI, readProvider);
+  registryRead = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, readProvider);
+  loadStats();
+  loadDirectory();
+  if (account) renderMe();
+}
+
 function init(){
   $("contractLink").href = "https://bscscan.com/address/" + BOARD_ADDRESS;
   $("contractLink").textContent = BOARD_ADDRESS;
@@ -379,13 +476,15 @@ function init(){
     $("dirBody").innerHTML = '<div class="empty">The web3 library failed to load (CDN unreachable). Check your connection and reload the page.</div>';
     return;
   }
-  readProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
-  boardRead = new ethers.Contract(BOARD_ADDRESS, BOARD_ABI, readProvider);
-  registryRead = new ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, readProvider);
   renderChips();
-  loadStats();
-  loadDirectory();
+  setupReads();
   $("connectBtn").addEventListener("click", connect);
+  $("heroConnectBtn").addEventListener("click", connect);
+  $("copyLinkBtn").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(location.href); toast("Link copied — paste it in the Binance App's wallet browser."); }
+    catch(e) { toast("Copy this page's address from the address bar, then paste it in the Binance App's wallet browser."); }
+  });
+  if (!window.ethereum) $("noWalletHint").classList.remove("hidden");
   $("refreshBtn").addEventListener("click", () => { loadStats(); loadDirectory(); renderMe(); });
   $("searchBox").addEventListener("input", renderDirectory);
   if (window.ethereum && window.ethereum.on) {
